@@ -1,0 +1,76 @@
+<html>
+	<head>
+		<link rel="stylesheet" title="kit" media="screen" type="text/css" href="style/style.css" />
+		<script type="text/javascript" src="script/environnement.js"></script>
+		<script type="text/javascript" src="script/jquery.js"></script>
+		<title>Page principale</title>
+	</head>
+	
+	<body onLoad="javascript:main()"> <!--onload sert � d�clencher une fonction quand toute la page est charg�e pour ne pas manipuler des donn�es inexistantes-->
+	<!--<body>
+		<script type="text/javascript" src="script/environnement.js">$(main);</script>-->
+		<!--<script type="text/javascript">
+		environnement =[];
+		<% 
+		String id = request.getParameter("id"); <!--l� on �crit du java entre les %
+		String login = request.getParameter("login");
+		String key = request.getParameter("key");
+		if ((id!=null)&&(login!=null)&(key!=null)){
+			out.println("environnement.actif = new User("+id+","+login+")");
+			out.println("environnement.key = "+key);
+			}
+		%>
+		</script>-->
+		<div id="page">
+		
+			<div id="header">
+		
+				<div id="logo">
+					<img src="images/logo.jpg" alt="Logo" />
+				</div>
+				
+				<div id="recherche">
+					<form name="searchform" id="search.form" action="javascript:search(this)">
+						<input type="text" name="Recherche" id="text_search"/>
+						<input type="submit" value="Rechercher" /><br/>
+						<input type="checkbox" value="friends" id="box_friends"/> Filtrer selon contacts
+					</form>
+				</div>
+				
+				<div id="liens">
+					<span><a href='connexion.html'>Connexion</a> / <a href='enregistrement.html'> Enregistrement <a/></span>
+				</div>
+				
+			</div>
+		
+			<div id="stat">
+				<span>
+					Zone statistiques
+				</span>
+			</div>
+			
+			<div id="content">
+				<div id="ajouter_comment">
+					Ajouter un commentaire:
+					<p>
+					<form name="new_comment" id="new_comment" action="javascript:func_new_comment(this)">
+						<textarea id="commentaire"></textarea>
+					</p>
+						<p>
+						<input type="submit" value="Ajouter commentaire" id="new_button" />
+					</form>
+						</p>
+				</div>
+				
+				<div id="comment">
+					<div class="text_comment">Zone liste de commentaires</div>
+					<div class="infos_comment">
+						<span>Post� par Joe le 12/08</span>
+						<img src="images/ajouter.gif" alt="ajouter comme ami"/>
+					</div>
+				</div>	
+			</div>
+		</div>
+	</body>
+</html>
+

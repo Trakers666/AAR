@@ -1,0 +1,37 @@
+<html>
+	<head>
+		<link rel="stylesheet" title="kit" media="screen" type="text/css" href="style/style.css" />
+		<script type="text/javascript" src="script/connexion.js"></script>
+		<script type="text/javascript" src="script/jquery.js"></script>
+	</head>
+	
+	<body>
+	
+		<div id="main">
+			<h1>Ouvrir une session</h1>
+			<form action="javascript:(function(){return;})()" method ="post" onSubmit="javascript:connecte(this)">
+		
+				<div id="formulaire">
+		
+					<div class="ids">
+						<span>Login</span>
+						<input type="text" name="login">
+					</div>
+					
+					<div class="ids">
+						<span>Mot de Passe</span>
+						<input type="password" name="password">
+					</div>
+		
+					<div class="buttons">
+						<input type="submit" value="Connexion" />
+						<input type="button" value="Annuler" onClick="window.location.href='index.html'" />
+					</div>
+					
+				</div>
+				
+			</form>
+		</div>
+	
+	</body>
+</html>

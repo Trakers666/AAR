@@ -1,0 +1,263 @@
+function main(){
+	environnement = new Object(); //site final
+	environnement.users = new Array(); //site final
+	var u1 = new User(4, "Yohan"); //simulation
+	environnement.users[1] = u1;//simulation
+	environnement.actif = environnement.users[1];//simulation
+	gererDivConnexion();//simulation
+	//$("#disconnect").click(disconnect); //site final
+	//$("#box.friends").click(func_filtre); //site final
+	var json_text = envoiCommentaires("Coucou");//simulation
+	RechercheCommentaire.traiterReponseJSON(json_text);//simulation
+	search();
+}
+
+function User(id, login, contact){
+	this.id = id; //Comme on appelle un new User(), le this s\'applique sur l\'objet User.
+	this.login = login;
+	this.contact = contact;
+	if (contact == undefined){
+		this.contact = false; //Par défaut contact est à false
+	}
+	if (environnement==undefined){
+		environnement ==[];
+	}
+	
+	if (environnement.users==undefined){
+		environnement.users==[];
+	}
+	environnement.users[this.id]=this;
+}
+
+User.prototype.modifStatus=function(){
+	if (this.contact){
+		this.contact = false;
+	}
+	else{
+		this.contact = true;
+	}
+}
+
+function Commentaire(id, auteur, texte, date, score){
+	this.id=id; 
+	this.auteur=auteur; 
+	this.texte=  texte;
+	this.date=date;
+	this.score= score;   // Par défaut il est undefined s\'il n\'est pas donné 
+}
+
+Commentaire.prototype.getHtml = function(){
+	var text="<div class='commentaire'>"+this.texte+"<p>Post&eacute; par "+this.auteur.login+" le "+this.date;
+	if (this.auteur.id != environnement.actif.id){
+		if(this.auteur.contact==true){
+		text+=" <span class='moins"+this.auteur.id+"'><img src='images/supprimer.gif' alt='Supprimer cet ami' onClick='javascript:ajoutsup_contact(\"-\","+this.auteur.id+");' /></span>";
+		}
+		else{
+		text+=" <span class='plus"+this.auteur.id+"'><img src='images/ajouter.gif' alt='Ajouter comme ami' onClick='javascript:ajoutsup_contact(\"+\","+this.auteur.id+");' /></span>";
+		}
+	}
+	return (text);
+}
+
+function ajoutsup_contact(valeurimage, id_friend){
+	environnement.users[id_friend].modifStatus();	//status de l'utilisateur concerné modifié !
+	if (valeurimage == "+"){
+		$.ajax({
+			type: "GET", //méthode d'envoi au serveur
+			url: "http://132.227.201.134:8080/LI328/AddFriend", //addresse du serveur et "AddFriend" est le nom de la servlet
+			data: "key="+environnement.actif.id+"&id_friend="+id_friend, //comment ça apparait après l'url
+			dataType: "jsonp",//le p sert à éviter les cas de cross domain car la servlet n'est pas à la meme adresse
+			success: $(".plus"+id_friend).replaceWith("<span class='moins"+id_friend+"'><img src='images/supprimer.gif' alt='Supprimer cet ami' id='-' onClick='javascript:ajoutsup_contact(\"-\","+id_friend+")' /></span>"), 
+							//quand on aura une réponse du serveur, on modifie le button
+			error: function (jhi, status, exception){ //2eme = code d'erreur, 3eme = exception
+				alert("Problème communication "+status+" "+exception);
+				deconnexion();			//deconnexion de l'utilisateur si erreur 
+			}
+		});
+	}else{
+		$.ajax({
+			type: "GET", //méthode d'envoi au serveur
+			url: "http://132.227.201.134:8080/LI328/RemoveFriend", //addresse du serveur et "RemoveFriend" est le nom de la servlet
+			data: "key="+environnement.actif.id+"&id_friend="+id_friend, //comment ça apparait après l'url
+			dataType: "jsonp",//le p sert à éviter les cas de cross domain car la servlet n'est pas à la meme adresse
+			success: $(".moins"+id_friend).replaceWith("<span class='plus"+id_friend+"'><img src='images/ajouter.gif' alt='Ajouter cet ami' id='+' onClick='javascript:ajoutsup_contact(\"+\","+id_friend+")' /></span>"),
+									//quand on aura une réponse du serveur, on modifie le button
+			error: function (jhi, status, exception){ //2eme = code d'erreur, 3eme = exception
+				alert("Problème communication "+status+" "+exception);
+				deconnexion();			//deconnexion de l'utilisateur si erreur 
+				}
+		});
+	}
+}
+
+function RechercheCommentaire(resultats, recherche, contacts_only, auteur, date){
+	this.resultats=resultats;
+	this.contacts_only = contacts_only;
+	this.auteur = auteur;
+	this.date = date;
+	this.recherche = recherche;
+	if (recherche.length == 0 || recherche == undefined){
+		this.recherche = "";
+	}
+	if (contacts_only == undefined){
+		this.contacts_only = false;
+	}
+	if (date == undefined){
+		this.date = new Date();
+	}
+}
+
+RechercheCommentaire.prototype.getHtml = function(){
+	var text="";
+	if(this.contacts_only){
+		for each (com in this.resultats){
+			if (com.auteur.contact == true){
+				text+=com.getHtml()+"<p/>";
+			}
+		}
+	}
+	else{
+		for each (com in this.resultats){
+			text+=com.getHtml()+"<p/>";
+		}
+	}
+	return text;
+}
+
+RechercheCommentaire.revive = function(key, value){
+	if (key.length == 0){
+		var r;
+		if ((value.erreur == undefined) || (value.erreur == 0)){ //erreur sera utilisé par le serveur. 
+		//Si une opération s'est bien passée, le champ erreur est undefined ou égal à 0, sinon il est > 0. Suivant sa veleur, on pourra renvoyer différents types d'erreur.
+			r = new RechercheCommentaire(value.resultats, value.recherche, value.contacts_only, value.auteur, value.date);
+		}
+		else{
+			r = new Object;
+			r.erreur = value.erreur;
+		}
+		return (r);
+	}
+	else 
+		if (key=='auteur'){ //si la clé est un auteur
+			var u;
+			if ((environnement!=undefined) && (environnement.users != undefined) && (environnement.users[value.id] != undefined)){
+				u = environnement.users[value.id];
+			}
+			else{
+				u = new User(value.id, value.login, value.contact);
+			}
+			return (u); //on renvoie l'utilisateur cherché, s'il n'existe pas on envoie un nouvel utilisateur créé juste avant
+		}
+		else 
+			if((isNumber(key)) && (value.auteur instanceof User)){//si la clé est un numéro, c'est qu'il s'agit d'un commentaire. 
+			//On fait un test inutile en plus (value.auteur instanceOf user) et on retourne un nouveau commentaire
+				var c = new Commentaire(value.id, value.auteur, value.texte, value.date, value.score);
+				return (c);
+			}
+			else 
+				if(key=='date'){//si la clé est une date on retourne une nouvelle date avec la valeur tapée
+					var d=new Date(value);
+					return (d);
+				}
+				else{
+					return (value);
+				}
+}
+
+RechercheCommentaire.traiterReponseJSON = function(json_text) {
+	var old_users = environnement.users; //on enregistre l'ancien tableau de users de l'environnement
+	environnement.users = [];
+	var obj = JSON.parse(json_text,RechercheCommentaire.revive);
+	if (obj.erreur == undefined){
+		$("#comment").html(obj.getHtml()); //remplace le texte de la div par le getHtml de cette recherche de comentaires
+	}
+	else{
+		environnement.users = old_users;
+		if (obj.erreur ==1){
+			alert("Probleme serveur");
+		}
+		else{
+			alert("Probleme base de données");
+		}
+	}
+}
+
+function envoiCommentaires(rech){
+	var u1 = new User(1, "Lela", true);
+	var u2 = new User(2, "Krystal", false);
+	var u3 = new User(3, "Naomi");
+	var com1 = new Commentaire(23, u2, "Coucou !", new Date(), 45);
+	var com2 = new Commentaire(5, u1, "Salut !", new Date(), 27);
+	var com3 = new Commentaire(7, u3, "Kikou lol !", new Date(), 12);
+	var tab= [];
+	tab[0] = com1;
+	tab[1] = com2;
+	tab[2] = com3;
+	var d = new Date();
+	var rec= new RechercheCommentaire(tab, rech, false, u3, d);
+	return (JSON.stringify(rec));
+}
+
+
+function isNumber(x) { 
+	return ! isNaN (x-0);
+}
+
+function gererDivConnexion(){
+	if (environnement.actif == undefined){
+		$("#liens").replaceWith("<div id='liens'><a href='connexion.html'>Connexion</a><br/><a href='enregistrement.html'> Enregistrement <a/></div>");
+	}
+	else{
+		$("#liens").replaceWith("<div id='liens'>"+environnement.actif.login+"<img src='images/deconnexion.gif' alt='Deconnexion' onClick='javascript:deconnexion();'/></div>");
+	}
+}
+
+function deconnexion(){ 
+	$.ajax({
+		type: "GET", //méthode d'envoi au serveur
+		url: "http://132.227.201.134:8080/LI328/Logout", //addresse du serveur et "Logout" est le nom de la servlet
+		dataType: "jsonp",//le p sert à éviter les cas de cross domain car la servlet n'est pas à la meme adresse
+		success: ($("#liens").replaceWith("<div id='liens'><a href='connexion.html'>Connexion</a><br/><a href='enregistrement.html'> Enregistrement <a/></div>"), 
+						//quand on aura une réponse du serveur, on modifie la zone de connexion
+				$("#comment").replaceWith("<div id='comment'><div class='text_comment'>Zone de commentaires</div><div class='infos_comment'><span>Post&eacute; par Joe le 12/08</span><img src='images/ajouter.gif' alt='ajouter comme ami'/></div></div>")),
+		error: function (jhi, status, exception){ //2eme = code d'erreur, 3eme = exception
+			alert("Problème communication "+status+" "+exception);
+			deconnexion();			//deconnexion de l'utilisateur si erreur 
+			}
+	});
+	environnement.actif = undefined;
+	environnement.key= undefined;
+}
+
+function search(form){	alert("recherche de : "+ l + " : "+ text_search.value + "\n\n\n   doit etre supprimer ");
+
+	if(box_friends.checked){  l=1} else{ l=0};
+	$.ajax({
+		type: "GET", //méthode d'envoi au serveur
+		url: "http://132.227.201.134:8080/LI328/Search", //addresse du serveur et "Search" est le nom de la servlet
+		data: "key="+environnement.actif.id+"&query="+text_search.value+"&friends="+l,
+		dataType: "jsonp",//le p sert à éviter les cas de cross domain car la servlet n'est pas à la meme adresse
+		success: RechercheCommentaire.traiterReponseJSON, 
+					//quand on aura une réponse du serveur, on modifie la zone de connexion
+		error: function (jhi, status, exception){ //2eme = code d'erreur, 3eme = exception
+			alert("Problème communication "+status+" "+exception);
+			deconnexion();			//deconnexion de l'utilisateur si erreur 
+			}
+	});
+	alert("recherche de : "+ l + " : "+ text_search.value + "\n\n\n   doit etre supprimer ");
+}	
+
+function func_new_comment(form){
+	$.ajax({
+		type: "GET", //méthode d'envoi au serveur
+		url: "http://132.227.201.134:8080/LI328/AddComment", //addresse du serveur et "AddComment" est le nom de la servlet
+		data: "key="+environnement.actif.id+"&text="+commentaire.value, //comment ça apparait après l'url
+		dataType: "jsonp",       //le p sert à éviter les cas de cross domain car la servlet n'est pas à la meme adresse
+		success: search,	//quand on aura une réponse du serveur, on rappelle search()
+		error: function (jhi, status, exception){ //2eme = code d'erreur, 3eme = exception
+			alert("Problème communication "+status+" "+exception);
+			deconnexion();			//deconnexion de l'utilisateur si erreur 
+		}
+	});
+	alert(commentaire.value+ "\n\n\n   doit etre supprimer ");
+}	
